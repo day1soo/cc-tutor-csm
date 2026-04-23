@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>커리큘럼 리팩토링 결과</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; line-height: 1.6; padding: 24px; max-width: 960px; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .header .subtitle { color: #86868b; font-size: 14px; }
+
+  .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px; }
+  .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .stat-card .number { font-size: 36px; font-weight: 700; }
+  .stat-card .label { font-size: 13px; color: #86868b; margin-top: 4px; }
+  .stat-card.fixed .number { color: #34c759; }
+  .stat-card.restruct .number { color: #007aff; }
+  .stat-card.principle .number { color: #ff9500; }
+  .stat-card.remain .number { color: #8e8e93; }
+
+  .top3 { background: white; border-radius: 12px; padding: 24px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .top3 h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+  .top3-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+  .top3-item:last-child { border-bottom: none; }
+  .top3-rank { width: 28px; height: 28px; border-radius: 50%; background: #34c759; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .top3-content .top3-title { font-weight: 600; font-size: 15px; }
+  .top3-content .top3-desc { font-size: 13px; color: #86868b; margin-top: 2px; }
+
+  .module-section { margin-bottom: 24px; }
+  .module-header { background: white; border-radius: 12px 12px 0 0; padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); user-select: none; }
+  .module-header h2 { font-size: 18px; font-weight: 600; }
+  .module-header .badge-group { display: flex; gap: 8px; }
+  .badge { padding: 2px 10px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+  .badge.fixed { background: #f0fff4; color: #34c759; }
+  .badge.restruct { background: #eff6ff; color: #007aff; }
+  .badge.principle { background: #fff8f0; color: #ff9500; }
+  .module-header .arrow { font-size: 18px; transition: transform 0.2s; color: #86868b; }
+  .module-header.open .arrow { transform: rotate(180deg); }
+  .module-body { background: white; border-radius: 0 0 12px 12px; padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .module-body.open { max-height: 10000px; padding: 8px 20px 20px; }
+
+  .change-card { border-left: 4px solid #34c759; border-radius: 8px; padding: 16px; margin: 12px 0; background: #fafafa; }
+  .change-card.restruct { border-color: #007aff; }
+  .change-card .change-title { font-weight: 600; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .change-card .tag { font-size: 12px; padding: 1px 8px; border-radius: 100px; font-weight: 600; }
+  .change-card .tag.fixed { background: #f0fff4; color: #34c759; }
+  .change-card .tag.restruct { background: #eff6ff; color: #007aff; }
+  .change-detail { margin-top: 8px; }
+  .change-detail dt { font-weight: 600; font-size: 13px; color: #86868b; margin-top: 8px; }
+  .change-detail dd { font-size: 14px; margin-top: 2px; }
+  .change-detail code { background: #f0f0f0; padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: 'SF Mono', Consolas, monospace; }
+  .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  .diff-col { padding: 10px 12px; border-radius: 6px; font-size: 13px; font-family: 'SF Mono', Consolas, monospace; white-space: pre-wrap; line-height: 1.4; }
+  .diff-col.before { background: #fff0f0; color: #7a1f1f; }
+  .diff-col.after { background: #f0fff4; color: #1f5c2e; }
+  .diff-label { font-size: 11px; font-weight: 600; color: #86868b; margin-bottom: 4px; }
+
+  .verify { background: white; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .verify h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+  .verify-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
+  .verify-row:last-child { border-bottom: none; }
+  .verify-row .ok { color: #34c759; font-weight: 600; }
+
+  .footer { text-align: center; padding: 24px; color: #86868b; font-size: 12px; }
+
+  @media (max-width: 600px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .diff { grid-template-columns: 1fr; }
+    body { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>커리큘럼 리팩토링 결과</h1>
+  <div class="subtitle">2026-04-22 | 대상: M1 ~ M4 전체 + 공통 자산 | 원칙: 사전 준비 0 / 프롬프트 3줄 / bullet 3개</div>
+</div>
+
+<!-- 대시보드 -->
+<div class="dashboard">
+  <div class="stat-card fixed">
+    <div class="number">14</div>
+    <div class="label">✅ 지적사항 수정</div>
+  </div>
+  <div class="stat-card restruct">
+    <div class="number">2</div>
+    <div class="label">🔵 모듈 재작성</div>
+  </div>
+  <div class="stat-card principle">
+    <div class="number">3</div>
+    <div class="label">🟠 원칙 신설</div>
+  </div>
+  <div class="stat-card remain">
+    <div class="number">0</div>
+    <div class="label">미해결 치명적</div>
+  </div>
+</div>
+
+<!-- 핵심 변화 Top 3 -->
+<div class="top3">
+  <h2>핵심 변화 Top 3</h2>
+  <div class="top3-item">
+    <div class="top3-rank">1</div>
+    <div class="top3-content">
+      <div class="top3-title">M3 전면 재작성 — Google Drive → Slack MCP</div>
+      <div class="top3-desc">
+        Google Drive 불안정성 + 팀 공유 시트 사전 세팅 부담 제거.
+        Slack은 CSM 일상 도구(파트장 신규딜 메시지)라 M4 옵션 A와 자연 연결.
+        각자 본인 워크스페이스 로그인만 — 퍼실리테이터 사전 세팅 0.
+      </div>
+    </div>
+  </div>
+  <div class="top3-item">
+    <div class="top3-rank">2</div>
+    <div class="top3-content">
+      <div class="top3-title">M4 본질 복구 — 완성본 복붙 → 빈칸 템플릿</div>
+      <div class="top3-desc">
+        Part B를 B-1(학습자 빈칸 채우기) + B-2(빈칸 기반 SKILL.md 생성)로 분리.
+        옵션 A/B/C 완성본은 <code>&lt;details&gt;</code> 레퍼런스 박스로 이동.
+        스킬 저장 경로 <code>.claude/skills/{name}/SKILL.md</code> 명시 → <code>/신규딜세팅</code> 트리거 실제 동작 보장.
+      </div>
+    </div>
+  </div>
+  <div class="top3-item">
+    <div class="top3-rank">3</div>
+    <div class="top3-content">
+      <div class="top3-title">SKILL.md 프로토콜에 "1실습 1노출" 규칙 + 사전 준비 2줄</div>
+      <div class="top3-desc">
+        스크롤 헬 원천 차단: EXECUTE가 실습 1개씩만 꺼낸다.
+        D-1 체크리스트가 "설치·로그인 + 레포 클론" 2줄로 단순화.
+        MCP 인증·공유 시트 등 사전 세팅 항목 전면 삭제.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verification -->
+<div class="verify">
+  <h2>🔎 검증 결과</h2>
+  <div class="verify-row"><span>현재 모듈 본문에 "시트 ID" 잔존 건수</span><span class="ok">0건</span></div>
+  <div class="verify-row"><span>현재 모듈 본문에 "Google Drive / Sheets" 잔존 건수</span><span class="ok">0건</span></div>
+  <div class="verify-row"><span>실습 프롬프트 3줄 초과 건수 (코드블록 내부)</span><span class="ok">0건</span></div>
+  <div class="verify-row"><span>FEEDBACK.md 기지적 11건 유지 여부</span><span class="ok">11/11 유지</span></div>
+  <div class="verify-row"><span>SKILL.md 사전 준비 체크리스트 항목 수</span><span class="ok">2개 (설치·로그인 / 레포 클론)</span></div>
+  <div class="verify-row"><span>드라이런 신규 발견 → 반영</span><span class="ok">4/4 반영 (samples 개수·프롬프트 길이·Slack auth·저장 경로)</span></div>
+</div>
+
+<!-- M1 -->
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>M1 환경 세팅 + CLAUDE.md</h2>
+    <div class="badge-group">
+      <span class="badge fixed">✅ 3</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 2 Step 1] 성공 기준 숫자 오류 (드라이런에서 발견)
+      </div>
+      <dl class="change-detail">
+        <dt>문제</dt>
+        <dd>성공 기준 "5개 파일"이지만 <code>samples/</code> 실제 6개 (README-samples.md 포함).</dd>
+        <dt>수정</dt>
+        <dd>
+          <div class="diff">
+            <div class="diff-col before"><div class="diff-label">BEFORE</div>5개 파일 — CSV 3개 + MD 1개 + TXT 1개</div>
+            <div class="diff-col after"><div class="diff-label">AFTER</div>6개 파일 — CSV 3개 + MD 2개 + TXT 1개</div>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 3] 17줄 프롬프트 → 1줄 + 접힘 템플릿
+      </div>
+      <dl class="change-detail">
+        <dt>문제</dt>
+        <dd>CLAUDE.md에 append할 템플릿 17줄이 프롬프트 코드블록 안에 통째로. 복붙 드릴에 3줄 원칙 위반.</dd>
+        <dt>수정</dt>
+        <dd>
+          프롬프트는 "1~2 섹션 골라서 최소 1줄은 본인 수정" 1줄로 축약 + 템플릿은 <code>&lt;details&gt;</code> 박스로 접어서 노출 부담 제거.
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 4] 반영 요약표를 Claude에게 뺏기던 것 → 자가 체크박스 4칸
+      </div>
+      <dl class="change-detail">
+        <dt>문제</dt>
+        <dd>"CLAUDE.md 어떤 규칙이 반영됐는지 표로 정리해줘"가 프롬프트에 포함 → Claude가 체크리스트 답까지 대신 채움.</dd>
+        <dt>수정</dt>
+        <dd>프롬프트는 리포트 생성까지만. 성공 기준을 4칸 체크박스로 제공 → <b>학습자 본인이 산출물 훑으며 체크</b>. "체크 전 Claude에게 묻지 말기!" 명시.</dd>
+      </dl>
+    </div>
+
+  </div>
+</div>
+
+<!-- M2 -->
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>M2 데이터 분석</h2>
+    <div class="badge-group">
+      <span class="badge fixed">✅ 4</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 1·4] 6줄·5줄 프롬프트 → 1줄
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          <div class="diff">
+            <div class="diff-col before"><div class="diff-label">BEFORE (실습 1, 6줄)</div>samples/enterprise-list-sample.csv를 읽어서:
+1. 총 기업 수
+2. ongoing vs closed 비율
+3. 운영난이도별 분포 (High/Medium/Low)
+를 요약해줘</div>
+            <div class="diff-col after"><div class="diff-label">AFTER (1줄)</div>samples/enterprise-list-sample.csv 읽고 총 기업 수 / ongoing:closed 비율 / 운영난이도 분포 요약해줘</div>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 2·3] 조건 고정 → 본인 조건 유도
+      </div>
+      <dl class="change-detail">
+        <dt>문제</dt>
+        <dd>"ongoing + High", "2026년 5월 이전" 조건이 박혀있어 학습자 맥락 변환 기회 상실.</dd>
+        <dt>수정</dt>
+        <dd>"본인이 평소 자주 보는 조건으로 바꿔도 OK" 유도 + 예시 3개 제시. 실습 3은 "앞으로 30일 안"으로 상대 시점 변환.</dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 6 직후] M3 Slack 티저 박스 추가
+      </div>
+      <dl class="change-detail">
+        <dt>문제</dt>
+        <dd>FEEDBACK.md 기지적: 실습 5 직후 "근데 이거 시트로도 돼?" 질문 발생 → M2-M3 전환 단절감. 약속이 본문에 없었음.</dd>
+        <dt>수정</dt>
+        <dd>실습 6 뒤 bullet 3개 박스: "슬랙 메시지도 직접 검색", "여러 채널 한 번에", "실무 직결" — M3가 답임을 명시.</dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 7] Claude 대신 비교 → 학습자 자가 회고
+      </div>
+      <dl class="change-detail">
+        <dt>문제</dt>
+        <dd>"수작업 과정과 방금 한 작업을 비교해서 표로 정리해줘" → Claude가 체감까지 대신. Part C 제목이 "Before vs After 체감"인데 체감 주체가 사라짐.</dd>
+        <dt>수정</dt>
+        <dd>
+          Claude 프롬프트는 SOP 읽기만. 그 다음 bullet 3개 자가 회고 질문:
+          <ul style="margin-left: 18px; margin-top: 6px;">
+            <li>SOP 몇 단계가 한 줄로 사라졌나?</li>
+            <li>30분 → 몇 초? 본인 체감으로.</li>
+            <li>월 20개 기업 × 사라진 시간 = 몇 시간?</li>
+          </ul>
+          마지막에만 "내가 적은 게 맞는지 확인해줘" 크로스체크 허용.
+        </dd>
+      </dl>
+    </div>
+
+  </div>
+</div>
+
+<!-- M3 -->
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>M3 MCP + Slack (전면 재작성)</h2>
+    <div class="badge-group">
+      <span class="badge restruct">🔵 재작성</span>
+      <span class="badge fixed">✅ 3 (기존 치명적 해소)</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+
+    <div class="change-card restruct">
+      <div class="change-title">
+        <span class="tag restruct">🔵 재작성</span>
+        Google Drive + 공유 시트 → Slack MCP 체험
+      </div>
+      <dl class="change-detail">
+        <dt>선정 이유</dt>
+        <dd>
+          <ul style="margin-left: 18px;">
+            <li>Google Drive는 가끔 불안정 (연수님 지적)</li>
+            <li>Slack은 CSM 일상 도구 — 파트장 신규딜 메시지, 기업 담당자 DM</li>
+            <li><b>M4 옵션 A(/신규딜세팅)와 직결</b> — 슬랙 메시지 가져와 스킬에 바로 투입</li>
+            <li>퍼실리테이터 사전 세팅 0 (각자 본인 워크스페이스 로그인)</li>
+          </ul>
+        </dd>
+        <dt>새 구성 (실습 4개)</dt>
+        <dd>
+          <ol style="margin-left: 18px;">
+            <li>Slack MCP 연결 (4단계 auth 플로우 안내)</li>
+            <li>본인 키워드로 메시지 검색</li>
+            <li>검색 결과 요약</li>
+            <li>(선택) Draft 메시지 작성 — ⚠️ 실제 발송 금지</li>
+          </ol>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 해소 (이전 치명적)</span>
+        시트 ID placeholder 전면 제거
+      </div>
+      <dl class="change-detail">
+        <dt>이전 문제</dt>
+        <dd>프롬프트에 <code>[시트ID]</code>, <code>[리포트시트ID]</code> 박혀있었고 CLAUDE.md에 "(시트 ID - 워크숍 전 설정)" 공란 → 실습이 물리적으로 막힘.</dd>
+        <dt>수정</dt>
+        <dd>Slack 전환으로 시트 ID 개념 자체가 사라짐. CLAUDE.md "학습용 시트" 섹션 삭제. grep으로 잔존 0건 확인.</dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 해소 (이전 치명적)</span>
+        MCP 켜는 법 안내 부재 → 4단계 auth 플로우 명문화
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          실습 1 = auth 자체. 4단계로 분리:
+          <ol style="margin-left: 18px;">
+            <li>Claude에게 "Slack MCP 연결하고 싶어" → authorization URL 받음</li>
+            <li>브라우저에서 워크스페이스 승인</li>
+            <li>리디렉트된 <code>localhost/callback?code=...</code> URL 복사</li>
+            <li>Claude에게 콜백 URL 전달 → 완료</li>
+          </ol>
+          troubleshooting.md에도 auth 실패 5가지 케이스 대응 추가.
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 해소 (이전 치명적)</span>
+        "시트 쓰기" 약속-이행 불일치 → 전제 자체 리셋
+      </div>
+      <dl class="change-detail">
+        <dt>이전 문제</dt>
+        <dd>M3 WHY·LEADER-TIP이 "결과를 시트에 써줘"를 약속했지만 EXECUTE는 read만.</dd>
+        <dt>수정</dt>
+        <dd>Slack 기반이라 "쓰기" 대신 "draft 작성"으로 전환. 실습 4에서 실제 draft 생성 (발송 금지). 약속과 이행 일치.</dd>
+      </dl>
+    </div>
+
+  </div>
+</div>
+
+<!-- M4 -->
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>M4 스킬 제작 (전면 재작성)</h2>
+    <div class="badge-group">
+      <span class="badge restruct">🔵 재작성</span>
+      <span class="badge fixed">✅ 3 (기존 치명적 해소)</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+
+    <div class="change-card restruct">
+      <div class="change-title">
+        <span class="tag restruct">🔵 재작성</span>
+        Part B 2단 분리 — 학습자 설계 지분 0% → 100%
+      </div>
+      <dl class="change-detail">
+        <dt>이전 문제</dt>
+        <dd>Part B가 옵션 A/B/C 완성본 SKILL.md를 통째로 복붙 → 학습자는 "이름만 선택" 역할. M4 본질("자기 업무 자동화") 훼손.</dd>
+        <dt>수정</dt>
+        <dd>
+          <div class="diff">
+            <div class="diff-col before"><div class="diff-label">BEFORE</div>옵션 A/B/C 중 선택
+→ 완성된 SKILL.md 30줄 그대로 붙여넣기
+→ 본인 업무 설계 0%</div>
+            <div class="diff-col after"><div class="diff-label">AFTER</div>B-1 (10분): 빈칸 템플릿
+  업무 / 입력 / 처리 3~5단계 / 출력
+B-2 (15분): "내가 적은 걸로
+  SKILL.md 만들어줘, .claude/skills/{name}/
+  SKILL.md 경로에 저장해줘"</div>
+          </div>
+          옵션 A/B/C 완성본은 맨 하단 <code>&lt;details&gt;</code> 레퍼런스 박스 — "막힐 때만 참고".
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 해소 (이전 치명적)</span>
+        SKILL.md 저장 경로 안내 부재 → 3줄 박스 명시
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          EXPLAIN 3번에 박스 추가:
+          <ul style="margin-left: 18px;">
+            <li>Claude Code는 <code>.claude/skills/{스킬이름}/SKILL.md</code> 를 슬래시 명령어로 인식</li>
+            <li>예: <code>.claude/skills/신규딜세팅/SKILL.md</code> → <code>/신규딜세팅</code> 호출 가능</li>
+            <li>💡 "올바른 경로에 저장해줘" 한 마디면 Claude가 폴더까지 생성</li>
+          </ul>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [옵션 A 테스트] samples/new-deal-message-sample.txt 사문화 → 실제 투입 + 슬랙 변종
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          실습 3 프롬프트에 두 경로 제시:
+          <ul style="margin-left: 18px;">
+            <li>테스트 데이터: <code>samples/new-deal-message-sample.txt</code> 활용 (9개 항목 재나열 제거)</li>
+            <li>💡 <b>M3 연계 변종</b>: "Slack에서 최근 '신규딜' 메시지 찾아서 /신규딜세팅에 넣어줘" — 본인 슬랙의 실제 파트장 메시지 투입</li>
+          </ul>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        [실습 4] Claude 자가 평가 → 학습자 자가 체크 bullet 3개
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          <ul style="margin-left: 18px;">
+            <li>결과가 내 실무 포맷과 일치하나?</li>
+            <li>빠진 정보가 있나?</li>
+            <li>자동 판단이 있다면 내 기준과 맞나?</li>
+          </ul>
+          "아니" 있으면 SKILL.md의 해당 부분만 지목해서 수정 요청 → 재테스트.
+        </dd>
+      </dl>
+    </div>
+
+  </div>
+</div>
+
+<!-- 공통 자산 -->
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>공통 자산 (SKILL.md / CLAUDE.md / glossary / troubleshooting / README)</h2>
+    <div class="badge-group">
+      <span class="badge principle">🟠 원칙 3</span>
+      <span class="badge fixed">✅ 기타 수정</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">🟠 원칙 신설</span>
+        [SKILL.md 프로토콜] "Phase A에서 실습은 1회당 1개만 노출" 규칙 추가
+      </div>
+      <dl class="change-detail">
+        <dt>효과</dt>
+        <dd>FEEDBACK.md 기지적 "스크롤 헬" 원천 해소. 학습자 완료 입력 시 다음 실습 꺼내는 흐름으로 전체 모듈 일괄 적용.</dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">🟠 원칙 신설</span>
+        [SKILL.md] 사전 준비 체크리스트 5줄 → 2줄
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          <div class="diff">
+            <div class="diff-col before"><div class="diff-label">BEFORE</div>[ ] Claude Code 설치
+[ ] 계정 로그인
+[ ] 레포 클론
+[ ] Google Drive MCP 인증 테스트
+[ ] 샘플/실제 데이터 준비</div>
+            <div class="diff-col after"><div class="diff-label">AFTER</div>[ ] Claude Code 설치 + 로그인
+[ ] cc-tutor-csm 레포 클론
+
+(MCP 인증은 M3에서 현장 라이브)</div>
+          </div>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">🟠 원칙 신설</span>
+        [CLAUDE.md] Slack MCP draft·read-only 규칙 추가
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>"학습용 시트 (Google Drive)" 섹션 삭제. 학습 모드 규칙에 "Gmail / Slack MCP 사용 시 읽기·검색·draft 작성만 허용 (실제 메시지 발송 금지)" 통합.</dd>
+      </dl>
+    </div>
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">✅ 수정</span>
+        glossary.md / troubleshooting.md / README.md 일관성 반영
+      </div>
+      <dl class="change-detail">
+        <dt>수정</dt>
+        <dd>
+          <ul style="margin-left: 18px;">
+            <li>glossary.md MCP 테이블: Google Drive MCP → Slack MCP</li>
+            <li>troubleshooting.md M3 섹션: 시트 권한 → auth 플로우 5가지 실패 케이스</li>
+            <li>README.md 타임라인: "M3 시트 연동" → "M3 Slack 연동 + 메시지 검색·요약·draft"</li>
+            <li>SKILL.md 워크숍 타임라인: "13:15 M3 MCP + Google Sheets" → "M3 MCP + Slack"</li>
+          </ul>
+        </dd>
+      </dl>
+    </div>
+
+  </div>
+</div>
+
+<!-- 드라이런 -->
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>드라이런 결과 (수정 전 사전 검증)</h2>
+    <div class="badge-group">
+      <span class="badge fixed">✅ 4건 반영</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+
+    <div class="change-card">
+      <div class="change-title">
+        <span class="tag fixed">솔직 공시</span>
+        1차 REVIEW.html은 텍스트 정적 분석이었음
+      </div>
+      <dl class="change-detail">
+        <dt>이번엔</dt>
+        <dd>각 모듈 핵심 실습 1~2개를 실제 실행 → <code>DRYRUN-NOTES.md</code>에 발견사항 기록 → 수정 계획에 반영. Slack MCP 도구 스키마도 확인 (현장 실행 auth는 워크숍 당일).</dd>
+        <dt>드라이런에서 새로 잡힌 것</dt>
+        <dd>
+          <ul style="margin-left: 18px;">
+            <li>M1 실습 2 Step 1 "5개 파일" → 실제 6개</li>
+            <li>M1 실습 3 17줄 프롬프트 (정적 분석 땐 못 본 체감)</li>
+            <li>M2 실습 1·4 6줄·5줄 프롬프트</li>
+            <li>Slack MCP 4단계 auth 플로우 구조</li>
+          </ul>
+        </dd>
+      </dl>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  Generated by /curriculum-review skill — Post-refactor summary
+</div>
+
+<script>
+function toggleModule(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const firstHeader = document.querySelector('.module-header');
+  if (firstHeader) {
+    firstHeader.classList.add('open');
+    firstHeader.nextElementSibling.classList.add('open');
+  }
+});
+</script>
+
+</body>
+</html>

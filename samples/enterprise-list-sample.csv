@@ -1,0 +1,11 @@
+NO.,기업명,CSM,플랜,입과방식,상태,수료기준,운영난이도,강의시작일자,강의종료일자,교육담당자,이메일
+1,A전자,김선영,올 - 커스텀,월별,ongoing,누적 시간 20시간 이상,High,2026-04-01,2026-04-30,이지은,jieun@acompany.com
+2,B데이타시스템,김선영,싱글 - 접수,월별,ongoing,수강률 100%,Low,2026-04-01,2026-09-30,강리안,rian@bcompany.com
+3,C오토에버,김선영,올,단건,closed,수강시간 30시간 이상,Low,2025-11-03,2026-02-02,류민경,minkyung@ccompany.com
+4,D보증기금,김선우,싱글,단건,ongoing,수강률 80% 이상,Low,2026-03-03,2027-03-02,김은실,eunsil@dcompany.com
+5,E학사,김선우,올,분기별,ongoing,-,Medium,2026-04-01,2027-03-31,박효진,hyojin@ecompany.com
+6,F그룹,김선우,올,월별,ongoing,매월 15시간 이상,High,2026-04-01,2026-04-30,최아름,areum@fcompany.com
+7,G카드,김선우,올,단건,ongoing,수강률 90% 이상,Medium,2026-03-02,2026-06-01,박원희,wonhee@gcompany.com
+8,H마켓,김선우,올,수시,ongoing,수강률 80% 이상,High,2024-07-01,2026-06-30,김예린,yerin@hcompany.com
+9,I손해보험,김선우,싱글,분기별,closed,월 3시간 이상 수강 & 총 30시간,Low,2024-02-05,2025-02-04,김담당,damdang@icompany.com
+10,J코리아,김선우,올 - 커스텀,단건,ongoing,수강률 70% 이상,High,2025-12-29,2026-12-31,박소현,sohyun@jcompany.com

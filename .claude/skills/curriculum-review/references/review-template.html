@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>커리큘럼 리뷰 결과</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; line-height: 1.6; padding: 24px; max-width: 960px; margin: 0 auto; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .header .subtitle { color: #86868b; font-size: 14px; }
+
+  /* Dashboard */
+  .dashboard { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 32px; }
+  .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .stat-card .number { font-size: 36px; font-weight: 700; }
+  .stat-card .label { font-size: 13px; color: #86868b; margin-top: 4px; }
+  .stat-card.critical .number { color: #ff3b30; }
+  .stat-card.improve .number { color: #ff9500; }
+  .stat-card.suggest .number { color: #34c759; }
+  .stat-card.dryrun .number { color: #af52de; }
+  .stat-card.skipped .number { color: #8e8e93; }
+
+  /* Top 3 */
+  .top3 { background: white; border-radius: 12px; padding: 24px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .top3 h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+  .top3-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+  .top3-item:last-child { border-bottom: none; }
+  .top3-rank { width: 28px; height: 28px; border-radius: 50%; background: #ff3b30; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .top3-content .top3-title { font-weight: 600; font-size: 15px; }
+  .top3-content .top3-desc { font-size: 13px; color: #86868b; margin-top: 2px; }
+
+  /* Module Section */
+  .module-section { margin-bottom: 24px; }
+  .module-header { background: white; border-radius: 12px 12px 0 0; padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); user-select: none; }
+  .module-header h2 { font-size: 18px; font-weight: 600; }
+  .module-header .badge-group { display: flex; gap: 8px; }
+  .badge { padding: 2px 10px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+  .badge.critical { background: #fff0f0; color: #ff3b30; }
+  .badge.improve { background: #fff8f0; color: #ff9500; }
+  .badge.suggest { background: #f0fff4; color: #34c759; }
+  .badge.dryrun { background: #f7f0ff; color: #af52de; }
+  .module-header .arrow { font-size: 18px; transition: transform 0.2s; color: #86868b; }
+  .module-header.open .arrow { transform: rotate(180deg); }
+  .module-body { background: white; border-radius: 0 0 12px 12px; padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .module-body.open { max-height: 5000px; padding: 8px 20px 20px; }
+
+  /* Issue Card */
+  .issue-card { border-left: 4px solid; border-radius: 8px; padding: 16px; margin: 12px 0; background: #fafafa; }
+  .issue-card.critical { border-color: #ff3b30; }
+  .issue-card.improve { border-color: #ff9500; }
+  .issue-card.suggest { border-color: #34c759; }
+  .issue-card.dryrun { border-color: #af52de; }
+  .issue-card.skipped { border-color: #8e8e93; opacity: 0.6; }
+  .issue-card .issue-title { font-weight: 600; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .issue-card .severity-tag { font-size: 12px; padding: 1px 8px; border-radius: 100px; font-weight: 600; }
+  .issue-card .severity-tag.critical { background: #fff0f0; color: #ff3b30; }
+  .issue-card .severity-tag.improve { background: #fff8f0; color: #ff9500; }
+  .issue-card .severity-tag.suggest { background: #f0fff4; color: #34c759; }
+  .issue-card .severity-tag.dryrun { background: #f7f0ff; color: #af52de; }
+  .issue-card .severity-tag.skipped { background: #f0f0f0; color: #8e8e93; }
+  .issue-detail { margin-top: 8px; }
+  .issue-detail dt { font-weight: 600; font-size: 13px; color: #86868b; margin-top: 8px; }
+  .issue-detail dd { font-size: 14px; margin-top: 2px; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 24px; color: #86868b; font-size: 12px; }
+
+  @media (max-width: 600px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    body { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>커리큘럼 리뷰 결과</h1>
+  <div class="subtitle">{{REVIEW_DATE}} | 대상: {{TARGET_MODULES}} | 드라이런: {{DRYRUN_MODE}} | FEEDBACK.md 중복 제외: {{SKIPPED_COUNT}}건</div>
+</div>
+
+<!-- 대시보드 -->
+<div class="dashboard">
+  <div class="stat-card critical">
+    <div class="number">{{CRITICAL_COUNT}}</div>
+    <div class="label">🔴 치명적</div>
+  </div>
+  <div class="stat-card improve">
+    <div class="number">{{IMPROVE_COUNT}}</div>
+    <div class="label">🟡 개선 필요</div>
+  </div>
+  <div class="stat-card suggest">
+    <div class="number">{{SUGGEST_COUNT}}</div>
+    <div class="label">🟢 제안</div>
+  </div>
+  <div class="stat-card dryrun">
+    <div class="number">{{DRYRUN_COUNT}}</div>
+    <div class="label">🟣 드라이런 발견</div>
+  </div>
+  <div class="stat-card skipped">
+    <div class="number">{{SKIPPED_COUNT}}</div>
+    <div class="label">⏭️ 기지적</div>
+  </div>
+</div>
+
+<!-- Top 3 우선 수정 -->
+<div class="top3">
+  <h2>가장 먼저 고칠 것 Top 3</h2>
+  {{TOP3_ITEMS}}
+  <!--
+  예시 구조:
+  <div class="top3-item">
+    <div class="top3-rank">1</div>
+    <div class="top3-content">
+      <div class="top3-title">[M2 실습 5] CLAUDE.md 취지에 역행하는 프롬프트</div>
+      <div class="top3-desc">프롬프트에 CLAUDE.md 규칙을 다시 나열 → M1의 가치를 무력화</div>
+    </div>
+  </div>
+  -->
+</div>
+
+<!-- 모듈별 리뷰 -->
+{{MODULE_SECTIONS}}
+<!--
+예시 구조:
+<div class="module-section">
+  <div class="module-header" onclick="toggleModule(this)">
+    <h2>M1 환경 세팅 + CLAUDE.md</h2>
+    <div class="badge-group">
+      <span class="badge critical">🔴 1</span>
+      <span class="badge improve">🟡 2</span>
+      <span class="badge suggest">🟢 1</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="module-body">
+    <div class="issue-card critical">
+      <div class="issue-title">
+        <span class="severity-tag critical">🔴 치명적</span>
+        [실습 1] "이 폴더"가 모호함
+      </div>
+      <dl class="issue-detail">
+        <dt>문제</dt>
+        <dd>"지금 이 폴더에 어떤 파일들이 있는지 보여줘"에서 "이 폴더"가 어디인지 학습자가 모른다.</dd>
+        <dt>왜 문제인가</dt>
+        <dd>비개발자는 "현재 작업 디렉토리" 개념이 없다. Claude Code를 어디서 실행했는지 의식하지 않는 상태.</dd>
+        <dt>수정 방향</dt>
+        <dd>"지금 작업 중인 cc-tutor-csm 폴더 안에 어떤 파일과 서브폴더가 있는지 보여줘"로 구체화.</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+-->
+
+<div class="footer">
+  Generated by /커리큘럼-리뷰 skill
+</div>
+
+<script>
+function toggleModule(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// 기본: 첫 번째 모듈만 열기
+document.addEventListener('DOMContentLoaded', () => {
+  const firstHeader = document.querySelector('.module-header');
+  if (firstHeader) {
+    firstHeader.classList.add('open');
+    firstHeader.nextElementSibling.classList.add('open');
+  }
+});
+</script>
+
+</body>
+</html>

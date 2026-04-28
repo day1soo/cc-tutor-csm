@@ -5,9 +5,22 @@ B2B CSM(Customer Success Manager)팀을 위한 Claude Code 학습 튜터.
 
 ## 빠른 시작
 
+### 가장 쉬운 방법 (한 줄 부탁)
+
+Claude Code를 아무 폴더에서 실행한 뒤, 아래처럼 부탁하세요:
+
+```
+https://github.com/day1soo/cc-tutor-csm 이거 학습하고 싶어. 설치해줘
+```
+
+Claude가 알아서 레포를 받아오고, 그 폴더에서 다시 Claude Code를 열라고 안내합니다.
+열고 나면 `/cc-tutor-csm` 또는 "학습 시작" 이라고 입력하면 튜터가 시작돼요.
+
+### 직접 명령어로 설치
+
 ```bash
 # 1. 레포 클론
-git clone https://github.com/[your-org]/cc-tutor-csm.git
+git clone https://github.com/day1soo/cc-tutor-csm.git
 cd cc-tutor-csm
 
 # 2. Claude Code 실행
